@@ -1,7 +1,7 @@
 # encoding utf-8
-from flask import Flask,render_template,url_for,redirect,request,jsonify
+from flask import Flask,render_template,url_for,redirect,request,jsonify,abort
 from flask_sqlalchemy import SQLAlchemy
-import sys
+import sys 
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres123@localhost:5432/todoapp'
@@ -56,6 +56,8 @@ def create_todo():
     # db.session.close()
   if not error:
     return jsonify(body)
+  else:
+    abort (400)   # 返回网络响应错误码
 
 @app.route('/about')
 def about():
