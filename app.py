@@ -1,5 +1,5 @@
 # encoding utf-8
-from flask import Flask,render_template,url_for,redirect,request
+from flask import Flask,render_template,url_for,redirect,request,jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -36,14 +36,15 @@ def index():
     # >>> query.all()
     return render_template('index.html',data = Todo.query.all())
 
-@app.route('/todos/create', methods=['POST'])
+@app.route('/todos/create',methods = ['POST'])
 def create_todo():
-  description = request.form.get('description','')  # 获取用户输入的数据
+  description = request.get_json()['description'] # 获取用户输入的数据
   todo = Todo(description=description)  # 创建一条记录
   db.session.add(todo)
   db.session.commit()
-  return redirect(url_for('index'))  # 重定向到index页面 index是上一个路由的函数的名字
-
+  return jsonify({
+    'description':todo.description
+  })
 
 @app.route('/about')
 def about():
