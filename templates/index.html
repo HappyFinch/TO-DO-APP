@@ -4,6 +4,12 @@
     .hidden {
         display: none;
     }
+
+    ul {
+        list-style: none;
+        padding: 0;
+        margin: 0%;
+    }
 </style>
 <div class="home">
     <h1>TO DO:</h1>
@@ -16,7 +22,10 @@
     </div>
     <ul id="todos">
         {% for d in data %}
-        <li>{{d.description}}</li>
+        <!-- Json对象可以通过xx.name来调用获取,json 是字符串,
+        在js中，json格式文件.xxx可以直接取到 不是字典！！ -->
+        <li><input type="checkbox" data-id="{{d.id}}" class="check-completed" {% if d.completed %} checked {% endif %} />{{d.description}}
+        </li>
         {% endfor%}
     </ul>
 
@@ -27,16 +36,16 @@
     // TO DO： 需要增加一个检查是否抓取到了元素的检查：
     if (document.getElementById('form')) {
         document.getElementById('form').onsubmit = function (e) {
-        e.preventDefault();
-        fetch('/todos/create', {
-            method: 'POST',
-            body: JSON.stringify({
-                'description': document.getElementById('description').value
-            }),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
+            e.preventDefault();
+            fetch('/todos/create', {
+                method: 'POST',
+                body: JSON.stringify({
+                    'description': document.getElementById('description').value
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
             .then(function (response) {
                 return response.json();
             })
@@ -48,12 +57,36 @@
                 document.getElementById('error').className = 'hidden';
             })
             .catch(function () {
-                document.getElementById('error').className = 'hidden';
+                document.getElementById('error').className = '';
             })
-    }
-    }else {
+        }
+    } else {
         alert('没抓到东西')
     }
-    
+
+    const checkboxes = document.querySelectorAll('.check-completed');
+      for (let i = 0; i < checkboxes.length; i++) {
+        const checkbox = checkboxes[i];
+        checkbox.onchange = function(e) {
+          const newCompleted = e.target.checked;
+          const todoId = e.target.dataset['id'];
+          fetch('/todos/' + todoId + '/set-completed', {
+            method: 'POST',
+            body: JSON.stringify({
+              'completed': newCompleted
+            }),
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          .then(function() {
+            document.getElementById('error').className = 'hidden';
+          })
+          .catch(function() {
+            document.getElementById('error').className = '';
+          })
+        }
+      }
+
 </script>
 {% endblock %}

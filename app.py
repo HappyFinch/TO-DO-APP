@@ -38,7 +38,7 @@ def index():
     # >>> query = Person.query.filter(Person.name == 'Amy')
     # >>> query.first()
     # >>> query.all()
-    return render_template('index.html',data = Todo.query.all())
+    return render_template('index.html',data = Todo.query.order_by('id').all())
 
 @app.route('/todos/create',methods = ['POST'])
 def create_todo():
@@ -55,12 +55,26 @@ def create_todo():
     db.session.rollback()
     print(sys.exc_info)
   finally:
-    pass
-    # db.session.close()
+    db.session.close()
   if not error:
     return jsonify(body)
   else:
     abort (400)   # 返回网络响应错误码
+
+@app.route('/todos/<todo_id>/set-completed', methods=['POST'])
+def set_completed_todo(todo_id):
+  try:
+    completed = request.get_json()['completed']
+    print('completed', completed)
+    todo = Todo.query.get(todo_id)
+    todo.completed = completed
+    db.session.commit()
+  except:
+    db.session.rollback()
+  finally:
+    db.session.close()
+  return redirect(url_for('index'))
+
 
 @app.route('/about')
 def about():
