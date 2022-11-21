@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="home">
+    <h1>TO DO:</h1>
+    <div>
+        <form method="post" action="/todos/create">
+            <input type="text" name="description" />
+            <input type="submit" value="Create" />
+        </form>
+    </div>
+    {% for d in data %}
+    <p>
+        <li>{{d.description}}</li>
+    </p>
+    {% endfor%}
+</div>
+{% endblock %}
