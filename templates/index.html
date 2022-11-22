@@ -59,9 +59,10 @@
         <ul id="lists" style="padding:20px;">
             {% for list in todolists %}
             <li>
-                <input type="checkbox" class="check-completed2" {% if list.completed %} checked {% endif %} />
+                <input type="checkbox" data-id="{{list.id}}" class="check-completed2" {% if list.completed %} checked {%
+                    endif %} />
                 <a href="/lists/{{list.id}}">{{list.name}}</a>
-                <button class="delete-button2">&cross;</button>
+                <button class="delete-button2" data-id="{{list.id}}">&cross;</button>
             </li>
             {% endfor %}
         </ul>
@@ -91,6 +92,52 @@
 
 </div>
 <script>
+    const checkboxes2 = document.querySelectorAll('.check-completed2');
+    for (let i = 0; i < checkboxes2.length; i++) {
+        const checkbox = checkboxes2[i];
+        checkbox.onchange = function (e) {
+            const newCompleted = e.target.checked;
+            const todolistId = e.target.dataset['id'];
+            fetch('/todolists/' + todolistId + '/set-completed', {
+                method: 'POST',
+                body: JSON.stringify({
+                    'completed': newCompleted
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(function () {
+                    document.getElementById('error2').className = 'hidden';
+                })
+                .catch(function () {
+                    document.getElementById('error2').className = '';
+                })
+        }
+    }
+
+    const deleteBtns2 = document.querySelectorAll('.delete-button2');
+    for (let i = 0; i < deleteBtns2.length; i++) {
+        const btn = deleteBtns2[i];
+        btn.onclick = function (e) {
+            console.log('event',e);
+            const todolistId = e.target.dataset['id'];
+            fetch('/todolists/' + todolistId, {
+                method: 'DELETE'
+            })
+                .then(function () {
+                    const item = e.target.parentElement;
+                    item.remove();
+                    // const item2 = document.getElementsByClassName('todo-wrapper');
+                    // item2.remove();
+                    document.getElementById('error2').className = 'hidden';
+                })
+                .catch(function () {
+                    document.getElementById('error2').className = '';
+                })
+        }
+    }
+
     const todolistInput = document.getElementById('cato_description');
     document.getElementById('todolist_form').onsubmit = function (e) {
         e.preventDefault();
@@ -115,8 +162,8 @@
 
                 const text = document.createElement('a');
                 text.className = 'check-completed';
-                text.href = '/lists/'+ {{active_list.id}};
-                text.innerHTML = ' '+ jsonResponse.name;
+                text.href = '/lists/' + {{ active_list.id }}+'';
+                text.innerHTML = ' ' + jsonResponse.name;
                 li.appendChild(text);
 
                 const deleteBtn = document.createElement('button');
@@ -126,11 +173,11 @@
 
                 document.getElementById('lists').appendChild(li);
                 document.getElementById('error2').className = 'hidden';
-            })
-            .catch(function () {
-                console.error('Error occurred');
-                document.getElementById('error2').className = '';
-            })
+    })
+            .catch (function () {
+        console.error('Error occurred');
+        document.getElementById('error2').className = '';
+    })
     }
 
     const descInput = document.getElementById('description');
@@ -190,8 +237,17 @@
                     'Content-Type': 'application/json'
                 }
             })
-                .then(function () {
-                    document.getElementById('error').className = 'hidden';
+            .then(response => response.json())
+        .then(jsonResponse => {
+            if (jsonResponse.change === True){
+                const checks = document.querySelectorAll('.check-completed2');
+                for (let i = 0; i < checks.length; i++){
+                    if (checks[i] === jsonResponse.listid){
+                        checks[i].checked = false
+                    }
+                }
+            }
+            document.getElementById('error').className = 'hidden';
                 })
                 .catch(function () {
                     document.getElementById('error').className = '';
@@ -203,6 +259,7 @@
     for (let i = 0; i < deleteBtns.length; i++) {
         const btn = deleteBtns[i];
         btn.onclick = function (e) {
+            console.log(e);
             const todoId = e.target.dataset['id'];
             fetch('/todos/' + todoId, {
                 method: 'DELETE'

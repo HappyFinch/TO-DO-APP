@@ -41,6 +41,39 @@ ctx.push()  # 这两句话解决没有content push 导致的报错
 # db.session.add(person)  # 事务的方式创建
 # db.session.commit()
 
+# todolist的完成框修改
+@app.route('/todolists/<todolist_id>/set-completed', methods=['POST']) 
+def set_completed_todolist(todolist_id):
+  try:
+    completed = request.get_json()['completed']
+    todolist = Todolist.query.get(todolist_id)
+    todolist.completed = completed
+    if completed == True:
+      todos = Todo.query.filter_by(list_id=todolist_id).all()
+      for i in todos:
+        i.completed = completed     
+      # todos = todolist.todos   # 不会用
+      # todos.completed = completed
+    db.session.commit()
+  except:
+    db.session.rollback()
+  finally:
+    db.session.close()
+  return redirect(url_for('index'))
+
+@app.route('/todolists/<todolist_id>', methods=['DELETE'])
+def delete_todolist(todolist_id):
+  try:
+    deleted_id = Todolist.query.filter_by(id=todolist_id)
+    db.session.delete(deleted_id)
+    db.session.commit()
+  except:
+    db.session.rollback()
+  finally:
+    db.session.close()
+    return redirect(url_for('index'))
+  
+
 @app.route('/todolists/create',methods = ['POST'])
 def create_todolist():
   error = False
@@ -100,24 +133,30 @@ def delete_todo(todo_id):
 
 @app.route('/todos/<todo_id>/set-completed', methods=['POST'])
 def set_completed_todo(todo_id):
+  change = False
+  listid = 0
   try:
     completed = request.get_json()['completed']
     print('completed', completed)
     todo = Todo.query.get(todo_id)
     todo.completed = completed
+    if completed == False:
+      if todo.list_id == True:
+        change = True
+        listid = todo.list_id
     db.session.commit()
   except:
     db.session.rollback()
   finally:
     db.session.close()
-  return redirect(url_for('index'))
+  return jsonify({'change':change,'listid':listid})
 
 @app.route('/lists/<list_id>')
 def get_list_todos(list_id):
     # 一些查询语句：
     # >>> query = Person.query.filter(Person.name == 'Amy')
     return render_template('index.html',
-    todolists = Todolist.query.all(), 
+    todolists = Todolist.query.order_by('id').all(), 
     active_list = Todolist.query.get(list_id),
     todos = Todo.query.filter_by(list_id=list_id).order_by('id').all())
 
