@@ -23,72 +23,157 @@
         color: red;
         float: right;
         cursor: pointer;
-        font-size: 25px;
+        font-size: 20px;
+    }
+
+    .list-wrapper {
+        display: inline-block;
+        vertical-align: top;
+        width: 250px;
+    }
+
+    .todo-wrapper {
+        display: inline-block;
+        vertical-align: top;
+        outline-style: groove;
+        outline-color: #DFB887;
+        padding: 20px;
+        width: 350px;
+    }
+
+    #cato_description {
+        width: 100px;
     }
 </style>
 <div class="home">
     <h1>TO DO:</h1>
-    <div>
-        <form id="form">
-            <input type="text" id="description" name="description" />
-            <input type="submit" value="Create" />
-        </form>
-        <div id="error" class="hidden">发生了一些错误</div>
+    <div class="list-wrapper">
+        <div style="margin: 10px;">
+            <p><strong> Category</strong></p>
+            <form id="todolist_form">
+                <input type="text" id="cato_description" name="cato_description" />
+                <input type="submit" value="create" />
+            </form>
+        </div>
+        <div id="error2" class="hidden">发生了一些错误</div>
+        <ul id="lists" style="padding:20px;">
+            {% for list in todolists %}
+            <li>
+                <input type="checkbox" class="check-completed2" {% if list.completed %} checked {% endif %} />
+                <a href="/lists/{{list.id}}">{{list.name}}</a>
+                <button class="delete-button2">&cross;</button>
+            </li>
+            {% endfor %}
+        </ul>
     </div>
-    <ul id="todos">
-        {% for d in data %}
-        <!-- Json对象可以通过xx.name来调用获取,json 是字符串,
+    <div class="todo-wrapper">
+        <div style="margin: 10px;">
+            <h4 id="active_list">{{active_list.name}}</h4>
+            <form id="form">
+                <input type="text" id="description" name="description" />
+                <input type="submit" value="Create" />
+            </form>
+        </div>
+        <div id="error" class="hidden">发生了一些错误</div>
+        <ul id="todos">
+            {% for todo in todos%}
+            <!-- Json对象可以通过xx.name来调用获取,json 是字符串,
         在js中，json格式文件.xxx可以直接取到 不是字典！！ -->
-        <li>
-            <input type="checkbox" data-id="{{d.id}}" class="check-completed" {% if d.completed %} checked {% endif
-                %} />{{d.description}}
-            <button class="delete-button" data-id="{{ d.id }}">&cross;</button>
-        </li>
-        {% endfor%}
-    </ul>
+            <li>
+                <input type="checkbox" data-id="{{todo.id}}" class="check-completed" {% if todo.completed %} checked {%
+                    endif %} />{{todo.description}}
+                <button class="delete-button" data-id="{{ todo.id }}">&cross;</button>
+            </li>
+            {% endfor%}
+        </ul>
+    </div>
+
 
 </div>
 <script>
-     const descInput = document.getElementById('description');
-      document.getElementById('form').onsubmit = function(e) {
+    const todolistInput = document.getElementById('cato_description');
+    document.getElementById('todolist_form').onsubmit = function (e) {
+        e.preventDefault();
+        const desc = todolistInput.value;
+        todolistInput.value = '';
+        fetch('/todolists/create', {
+            method: 'POST',
+            body: JSON.stringify({
+                'name': desc,
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(jsonResponse => {
+                const li = document.createElement('li');
+                const checkbox = document.createElement('input');
+                checkbox.className = 'check-completed2';
+                checkbox.type = 'checkbox';
+                li.appendChild(checkbox);
+
+                const text = document.createElement('a');
+                text.className = 'check-completed';
+                text.href = '/lists/'+ {{active_list.id}};
+                text.innerHTML = ' '+ jsonResponse.name;
+                li.appendChild(text);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-button2';
+                deleteBtn.innerHTML = '&cross;';
+                li.appendChild(deleteBtn);
+
+                document.getElementById('lists').appendChild(li);
+                document.getElementById('error2').className = 'hidden';
+            })
+            .catch(function () {
+                console.error('Error occurred');
+                document.getElementById('error2').className = '';
+            })
+    }
+
+    const descInput = document.getElementById('description');
+    document.getElementById('form').onsubmit = function (e) {
         e.preventDefault();
         const desc = descInput.value;
         descInput.value = '';
         fetch('/todos/create', {
-          method: 'POST',
-          body: JSON.stringify({
-            'description': desc,
-          }),
-          headers: {
-            'Content-Type': 'application/json',
-          }
+            method: 'POST',
+            body: JSON.stringify({
+                'description': desc,
+                'list_id': {{ active_list.id }},
+            }),
+    headers: {
+        'Content-Type': 'application/json',
+            }
         })
-        .then(response => response.json())
+            .then(response => response.json())
         .then(jsonResponse => {
-          const li = document.createElement('li');
-          const checkbox = document.createElement('input');
-          checkbox.className = 'check-completed';
-          checkbox.type = 'checkbox';
-          checkbox.setAttribute('data-id', jsonResponse.id);
-          li.appendChild(checkbox);
+            const li = document.createElement('li');
+            const checkbox = document.createElement('input');
+            checkbox.className = 'check-completed';
+            checkbox.type = 'checkbox';
+            checkbox.setAttribute('data-id', jsonResponse.id);
+            li.appendChild(checkbox);
 
-          const text = document.createTextNode(' ' + jsonResponse.description);
-          li.appendChild(text);
+            const text = document.createTextNode(jsonResponse.description);
+            li.appendChild(text);
 
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'delete-button';
-          deleteBtn.setAttribute('data-id', jsonResponse.id);
-          deleteBtn.innerHTML = '&cross;';
-          li.appendChild(deleteBtn);
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-button';
+            deleteBtn.setAttribute('data-id', jsonResponse.id);
+            deleteBtn.innerHTML = '&cross;';
+            li.appendChild(deleteBtn);
 
-          document.getElementById('todos').appendChild(li);
-          document.getElementById('error').className = 'hidden';
+            document.getElementById('todos').appendChild(li);
+            document.getElementById('error').className = 'hidden';
         })
-        .catch(function() {
-          console.error('Error occurred');
-          document.getElementById('error').className = '';
+        .catch(function () {
+            console.error('Error occurred');
+            document.getElementById('error').className = '';
         })
-      }
+    }
 
     const checkboxes = document.querySelectorAll('.check-completed');
     for (let i = 0; i < checkboxes.length; i++) {

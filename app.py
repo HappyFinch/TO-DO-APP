@@ -24,10 +24,11 @@ class Todo(db.Model):
   def __repr__(self):
     return f'<Todo ID: {self.id}, description: {self.description}>'
 
-class Todolist(db.Model):
+class Todolist(db.Model):   # 待办分类的表
    __tablename__ = 'todolists'  # 用于给表起名字
    id = db.Column(db.Integer, primary_key=True)
    name = db.Column(db.String(), nullable=False)
+   completed = db.Column(db.Boolean,nullable = False,default = False)
    todos = db.relationship('Todo',backref = 'list', lazy = True)
 
 
@@ -40,13 +41,26 @@ ctx.push()  # 这两句话解决没有content push 导致的报错
 # db.session.add(person)  # 事务的方式创建
 # db.session.commit()
 
-@app.route('/')
-def index():
-    # 一些查询语句：
-    # >>> query = Person.query.filter(Person.name == 'Amy')
-    # >>> query.first()
-    # >>> query.all()
-    return render_template('index.html',data = Todo.query.order_by('id').all())
+@app.route('/todolists/create',methods = ['POST'])
+def create_todolist():
+  error = False
+  body ={}
+  try:
+    name = request.get_json()['name'] # 获取用户输入的数据
+    todolist = Todolist(name=name)  # 创建一条记录
+    db.session.add(todolist)
+    db.session.commit()
+    body['name'] = todolist.name
+  except:
+    error = True
+    db.session.rollback()
+    print(sys.exc_info)
+  finally:
+    db.session.close()
+  if not error:
+    return jsonify(body)
+  else:
+    abort (500)  
 
 @app.route('/todos/create',methods = ['POST'])
 def create_todo():
@@ -54,7 +68,10 @@ def create_todo():
   body ={}
   try:
     description = request.get_json()['description'] # 获取用户输入的数据
+    list_id = request.get_json()['list_id']
     todo = Todo(description=description)  # 创建一条记录
+    active_list = Todolist.query.get(list_id)
+    todo.list = active_list
     db.session.add(todo)
     db.session.commit()
     body['description'] = todo.description
@@ -67,7 +84,19 @@ def create_todo():
   if not error:
     return jsonify(body)
   else:
-    abort (400)   # 返回网络响应错误码
+    abort (500)  
+
+
+@app.route('/todos/<todo_id>', methods=['DELETE'])
+def delete_todo(todo_id):
+  try:
+    Todo.query.filter_by(id=todo_id).delete()
+    db.session.commit()
+  except:
+    db.session.rollback()
+  finally:
+    db.session.close()
+  return jsonify({ 'success': True })
 
 @app.route('/todos/<todo_id>/set-completed', methods=['POST'])
 def set_completed_todo(todo_id):
@@ -83,16 +112,18 @@ def set_completed_todo(todo_id):
     db.session.close()
   return redirect(url_for('index'))
 
-@app.route('/todos/<todo_id>', methods=['DELETE'])
-def delete_todo(todo_id):
-  try:
-    Todo.query.filter_by(id=todo_id).delete()
-    db.session.commit()
-  except:
-    db.session.rollback()
-  finally:
-    db.session.close()
-  return jsonify({ 'success': True })
+@app.route('/lists/<list_id>')
+def get_list_todos(list_id):
+    # 一些查询语句：
+    # >>> query = Person.query.filter(Person.name == 'Amy')
+    return render_template('index.html',
+    todolists = Todolist.query.all(), 
+    active_list = Todolist.query.get(list_id),
+    todos = Todo.query.filter_by(list_id=list_id).order_by('id').all())
+
+@app.route('/')
+def index():
+    return redirect(url_for('get_list_todos',list_id = 1))
 
 @app.route('/about')
 def about():
